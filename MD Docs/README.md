@@ -30,7 +30,7 @@ PyFileTransfer uses a client-server architecture where:
                          Direct P2P Connection
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Using Docker (Recommended)
 
