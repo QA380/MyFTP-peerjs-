@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Files - PyFileTransfer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📤 Send Files</h1>
+            <a href="/" class="back-link">← Back to Home</a>
+        </header>
+
+        <main>
+            <div id="file-selection" class="section">
+                <h2>Select Files to Share</h2>
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" multiple>
+                    <label for="fileInput" class="file-label">
+                        <span class="icon">📁</span>
+                        Choose Files
+                    </label>
+                </div>
+                <div id="fileList" class="file-list"></div>
+            </div>
+
+            <div id="link-section" class="section hidden">
+                <h2>Share This Link</h2>
+                <div class="link-container">
+                    <input type="text" id="shareLink" readonly>
+                    <button id="copyBtn" class="btn btn-secondary">Copy Link</button>
+                </div>
+                <div class="qr-container">
+                    <canvas id="qrcode"></canvas>
+                </div>
+                <p class="info">Send this link to the person you want to share files with</p>
+            </div>
+
+            <div id="waiting-section" class="section hidden">
+                <div class="status">
+                    <div class="spinner"></div>
+                    <p>Waiting for receiver to connect...</p>
+                </div>
+            </div>
+
+            <div id="transfer-section" class="section hidden">
+                <h2>Transfer in Progress</h2>
+                <div id="transferProgress">
+                    <!-- Progress bars will be inserted here -->
+                </div>
+                <div class="transfer-stats">
+                    <p>Speed: <span id="transferSpeed">--</span></p>
+                    <p>Time Remaining: <span id="timeRemaining">--</span></p>
+                </div>
+            </div>
+
+            <div id="complete-section" class="section hidden">
+                <div class="success-message">
+                    <span class="icon">✅</span>
+                    <h2>Transfer Complete!</h2>
+                    <p>All files have been successfully sent</p>
+                    <a href="/send" class="btn btn-primary">Send More Files</a>
+                </div>
+            </div>
+
+            <div id="error-section" class="section hidden">
+                <div class="error-message">
+                    <span class="icon">❌</span>
+                    <h2>Transfer Failed</h2>
+                    <p id="errorMessage"></p>
+                    <a href="/send" class="btn btn-primary">Try Again</a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/qrcode.min.js"></script>
+    <script src="/static/js/sender.js"></script>
+    <script>
+        const ROOM_ID = "{{ room_id }}";
+    </script>
+</body>
+</html>

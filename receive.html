@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receive Files - PyFileTransfer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📥 Receive Files</h1>
+            <a href="/" class="back-link">← Back to Home</a>
+        </header>
+
+        <main>
+            <div id="connecting-section" class="section">
+                <div class="status">
+                    <div class="spinner"></div>
+                    <p>Connecting to sender...</p>
+                </div>
+            </div>
+
+            <div id="preview-section" class="section hidden">
+                <h2>Files to Receive</h2>
+                <div id="filePreview" class="file-list"></div>
+                <div class="actions">
+                    <button id="acceptBtn" class="btn btn-primary">Accept & Download</button>
+                    <button id="declineBtn" class="btn btn-secondary">Decline</button>
+                </div>
+            </div>
+
+            <div id="transfer-section" class="section hidden">
+                <h2>Receiving Files</h2>
+                <div id="transferProgress">
+                    <!-- Progress bars will be inserted here -->
+                </div>
+                <div class="transfer-stats">
+                    <p>Speed: <span id="transferSpeed">--</span></p>
+                    <p>Time Remaining: <span id="timeRemaining">--</span></p>
+                </div>
+            </div>
+
+            <div id="complete-section" class="section hidden">
+                <div class="success-message">
+                    <span class="icon">✅</span>
+                    <h2>Transfer Complete!</h2>
+                    <p>All files have been successfully received</p>
+                    <div id="downloadedFiles" class="file-list"></div>
+                </div>
+            </div>
+
+            <div id="error-section" class="section hidden">
+                <div class="error-message">
+                    <span class="icon">❌</span>
+                    <h2>Connection Failed</h2>
+                    <p id="errorMessage"></p>
+                    <a href="/" class="btn btn-primary">Back to Home</a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/receiver.js"></script>
+    <script>
+        const ROOM_ID = "{{ room_id }}";
+    </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+[Unit]
+Description=PyFileTransfer - P2P File Transfer Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pyfiletransfer
+Group=pyfiletransfer
+WorkingDirectory=/opt/pyfiletransfer
+Environment="PATH=/opt/pyfiletransfer/venv/bin"
+ExecStart=/opt/pyfiletransfer/venv/bin/uvicorn src.main:app --host 0.0.0.0 --port 8080
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pyfiletransfer
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/pyfiletransfer
+
+[Install]
+WantedBy=multi-user.target
