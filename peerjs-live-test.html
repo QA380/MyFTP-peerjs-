@@ -37,7 +37,7 @@
     }
 
     .card {
-      width: 100%;
+      width: min(500px, 100%);
       background: rgba(17, 24, 39, 0.9);
       border: 1px solid var(--border);
       border-radius: 14px;
@@ -46,7 +46,7 @@
     }
 
     .card1 {
-      width: 100%;
+      width: min(500px, 100%);
       background: rgba(17, 24, 39, 0.9);
       border: 1px solid var(--border);
       border-radius: 14px;
@@ -255,11 +255,9 @@
       .cards {
         grid-template-columns: 1fr;
       }
-
       .layout {
         grid-template-columns: 1fr;
       }
-
       .media-grid {
         grid-template-columns: 1fr;
       }
@@ -269,47 +267,6 @@
 </head>
 <body>
   <div class="cards">
-    <main class="card1">
-      <h1>PeerJS Call</h1>
-
-      <!-- Calls -->
-      <section class="panel call-page">
-          <h1>Calls</h1>
-          <div class="stack">
-            <div class="actions">
-              <button id="audioCallBtn" type="button">Audio Call</button>
-              <button id="videoCallBtn" type="button">Video Call</button>
-            </div>
-            <div class="media-grid">
-              <div class="media-box">
-                <h3>Send</h3>
-                <video id="localVideo" autoplay playsinline muted></video>
-              </div>
-              <div class="media-box">
-                <h3>Recieve</h3>
-                <video id="remoteVideo" autoplay playsinline></video>
-              </div>
-            </div>
-            <div class="hint"> Secured Network </div>
-          </div>
-        </section>
-        
-
-        <!-- File Transfer -->
-        <section class="panel file-page">
-          <h1>File Transfer</h1>
-          <div class="stack">
-            <input id="fileInput" type="file" multiple />
-            <input id="folderInput" type="file" webkitdirectory directory multiple />
-            <div class="actions">
-              <button id="sendFilesBtn" type="button">Send Files</button>
-              <button id="sendFolderBtn" type="button">Send Folder</button>
-            </div>
-            <div class="hint">Pick files or a folder, then send them over the active data connection.</div>
-          </div>
-        </section>
-    </main>
-
     <main class="card">
     <h1>PeerJS Live Test</h1>
     <p>Connect, transfer files or folders, and place audio or video calls from one place.</p>
@@ -370,6 +327,47 @@
 
       </div>
     </div>
+    </main>
+
+    <main class="card1">
+      <h1>PeerJS Call</h1>
+
+      <!-- Calls -->
+      <section class="panel call-page">
+          <h1>Calls</h1>
+          <div class="stack">
+            <div class="actions">
+              <button id="audioCallBtn" type="button">Audio Call</button>
+              <button id="videoCallBtn" type="button">Video Call</button>
+            </div>
+            <div class="media-grid">
+              <div class="media-box">
+                <h3>Send</h3>
+                <video id="localVideo" autoplay playsinline muted></video>
+              </div>
+              <div class="media-box">
+                <h3>Recieve</h3>
+                <video id="remoteVideo" autoplay playsinline></video>
+              </div>
+            </div>
+            <div class="hint"> Secured Network </div>
+          </div>
+        </section>
+
+
+        <!-- File Transfer -->
+        <section class="panel file-page">
+          <h1>File Transfer</h1>
+          <div class="stack">
+            <input id="fileInput" type="file" multiple />
+            <input id="folderInput" type="file" webkitdirectory directory multiple />
+            <div class="actions">
+              <button id="sendFilesBtn" type="button">Send Files</button>
+              <button id="sendFolderBtn" type="button">Send Folder</button>
+            </div>
+            <div class="hint">Pick files or a folder, then send them over the active data connection.</div>
+          </div>
+        </section>
     </main>
   </div>
 
