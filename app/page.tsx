@@ -357,7 +357,7 @@ export default function Home() {
             <section className="space-y-3 rounded-xl border border-slate-800 bg-[#030712]/50 p-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Connection Settings</h2>
 
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-[140px_minmax(0,1fr)_120px_120px]">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 2xl:grid-cols-[140px_minmax(0,1fr)_120px_120px]">
                 <select
                   className={inputClass}
                   value={mode}
@@ -390,7 +390,7 @@ export default function Home() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <input
                   className={inputClass}
                   placeholder="Secure: true/false"
@@ -405,7 +405,7 @@ export default function Home() {
               <p className="text-xs text-slate-400">{modeHint}</p>
 
               <div className="rounded-full border border-slate-700 bg-[#030712]/60 px-3 py-2 text-sm text-slate-300">
-                <strong className="text-slate-100">Your Peer ID:</strong>
+                <strong className="text-slate-100">Peer ID:</strong>
                 <button
                   className="ml-2 rounded-full border border-cyan-500/40 bg-cyan-500/20 px-2 py-1 font-mono text-xs text-cyan-200 hover:bg-cyan-500/30"
                   onClick={copyPeerId}
