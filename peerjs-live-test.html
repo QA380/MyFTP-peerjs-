@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PeerJS Live Test</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #22c55e;
+      --accent-2: #0ea5e9;
+      --danger: #ef4444;
+      --border: #1f2937;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top right, #1e3a8a 0%, var(--bg) 45%), var(--bg);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: min(700px, 100%);
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .card1 {
+      width: min(700px, 100%);
+      height: min(350px, 100%);
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solder var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .card > h1 {
+      margin: 80 0 8px;
+      font-size: 1.5rem;
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      margin-top: 14px;
+    }
+
+    .column {
+      display: grid;
+      gap: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: rgba(11, 18, 32, 0.72);
+      min-width: 0;
+    }
+
+    .panel h1 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .panel .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .file-page,
+    .call-page,
+    .chat-page {
+      min-width: 0;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .row.three {
+      grid-template-columns: 1fr 1fr auto;
+    }
+
+     .row.four {
+      grid-template-columns: 140px 1fr 120px 120px;
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .media-box {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      background: #0b1220;
+    }
+
+    .media-box h3 {
+      margin: 0 0 8px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    video {
+      width: 100%;
+      background: #020617;
+      border-radius: 8px;
+      min-height: 120px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .actions button {
+      width: 100%;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    input, button, select {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      font-size: 0.95rem;
+    }
+
+    input, select {
+      background: #0b1220;
+      color: var(--text);
+    }
+
+    button {
+      color: white;
+      background: var(--accent-2);
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+
+    button.send {
+      background: var(--accent);
+    }
+
+    .status {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .status strong {
+      color: var(--text);
+    }
+
+    .id-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: 8px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #0b1220;
+      color: var(--text);
+      font-family: Consolas, "Courier New", monospace;
+      user-select: all;
+      cursor: pointer;
+    }
+
+    .copy-id {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      background: var(--accent-2);
+    }
+
+    .log {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      min-height: 140px;
+      max-height: 240px;
+      overflow: auto;
+      background: #0b1220;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.88rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .danger {
+      color: var(--danger);
+    }
+
+    .grid > * {
+      width: 100%;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .media-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+</head>
+<body>
+  <main class="card1">
+    
+  </main>
+
+</body>
+
+
+</head>
+<body>
+  <main class="card">
+    <h1>PeerJS Live Test</h1>
+    <p>Connect, transfer files or folders, and place audio or video calls from one place.</p>
+
+    <div class="controls">
+      <div class="row four">
+        <select id="mode">
+          <option value="cloud" selected>Cloud</option>
+          <option value="local">Local server</option>
+        </select>
+        <input id="host" placeholder="Host" value="0.peerjs.com" />
+        <input id="port" placeholder="Port" value="443" />
+        <input id="path" placeholder="Path" value="/" />
+      </div>
+      <div class="row" style="margin-bottom: 0;">
+        <input id="secure" placeholder="Secure: true/false" value="true" />
+        <button id="reconnectBtn">Reconnect Peer</button>
+      </div>
+      <div class="hint">For local mode, use host localhost, port 9000, path /myapp, secure false.</div>
+      <div class="status">
+        <strong>Your Peer ID:</strong>
+        <span class="id-chip" id="myIdChip" title="Click to copy">
+          <span id="myId">Connecting...</span>
+          <button class="copy-id" id="copyIdBtn" type="button">Copy</button>
+        </span>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="column">
+        <section class="panel">
+          <h1>Connection</h1>
+          <div class="stack">
+            <div class="row" style="margin: 0;">
+              <input id="targetId" placeholder="Enter target peer ID" />
+              <button id="connectBtn">Connect</button>
+            </div>
+            <div class="row three" style="margin: 0;">
+              <input id="message" placeholder="Type message" />
+              <input id="sender" placeholder="Name (optional)" />
+              <button class="send" id="sendBtn">Send</button>
+            </div>
+            <button class="clear full" id="clearBtn" type="button">Clear</button>
+            <div class="status">Connection: <strong id="connState">Not connected</strong></div>
+          </div>
+        </section>
+
+        <section class="panel chat-page">
+          <h1>Chat and Log</h1>
+          <div class="stack">
+            <div class="log" id="log"></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="column">
+        <section class="panel call-page">
+          <h1>Calls</h1>
+          <div class="stack">
+            <div class="actions">
+              <button id="audioCallBtn" type="button">Audio Call</button>
+              <button id="videoCallBtn" type="button">Video Call</button>
+            </div>
+            <div class="media-grid">
+              <div class="media-box">
+                <h3>Local Stream</h3>
+                <video id="localVideo" autoplay playsinline muted></video>
+              </div>
+              <div class="media-box">
+                <h3>Remote Stream</h3>
+                <video id="remoteVideo" autoplay playsinline></video>
+              </div>
+            </div>
+            <div class="hint">Allow camera and microphone when prompted for calls.</div>
+          </div>
+        </section>
+
+        <section class="panel file-page">
+          <h1>File Transfer</h1>
+          <div class="stack">
+            <input id="fileInput" type="file" multiple />
+            <input id="folderInput" type="file" webkitdirectory directory multiple />
+            <div class="actions">
+              <button id="sendFilesBtn" type="button">Send Files</button>
+              <button id="sendFolderBtn" type="button">Send Folder</button>
+            </div>
+            <div class="hint">Pick files or a folder, then send them over the active data connection.</div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+  <script>
+    const myIdEl = document.getElementById('myId');
+    const targetIdEl = document.getElementById('targetId');
+    const messageEl = document.getElementById('message');
+    const senderEl = document.getElementById('sender');
+    const connectBtn = document.getElementById('connectBtn');
+    const reconnectBtn = document.getElementById('reconnectBtn');
+    const copyIdBtn = document.getElementById('copyIdBtn');
+    const myIdChip = document.getElementById('myIdChip');
+    const sendBtn = document.getElementById('sendBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const fileInput = document.getElementById('fileInput');
+    const folderInput = document.getElementById('folderInput');
+    const sendFilesBtn = document.getElementById('sendFilesBtn');
+    const sendFolderBtn = document.getElementById('sendFolderBtn');
+    const audioCallBtn = document.getElementById('audioCallBtn');
+    const videoCallBtn = document.getElementById('videoCallBtn');
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const connStateEl = document.getElementById('connState');
+    const logEl = document.getElementById('log');
+    const modeEl = document.getElementById('mode');
+    const hostEl = document.getElementById('host');
+    const portEl = document.getElementById('port');
+    const pathEl = document.getElementById('path');
+    const secureEl = document.getElementById('secure');
+
+    let peer = null;
+    let activeConn = null;
+  let mediaConn = null;
+  let localStream = null;
+
+    const log = (line, isError = false) => {
+      const stamp = new Date().toLocaleTimeString();
+      const text = `[${stamp}] ${line}`;
+      const div = document.createElement('div');
+      if (isError) div.className = 'danger';
+      div.textContent = text;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(text);
+    };
+
+    const setConnState = (text) => {
+      connStateEl.textContent = text;
+    };
+
+    const requireConnection = () => {
+      if (!activeConn || !activeConn.open) {
+        log('No open connection. Connect first.', true);
+        return false;
+      }
+
+      return true;
+    };
+
+    const copyPeerId = async () => {
+      const peerId = myIdEl.textContent.trim();
+      if (!peerId || peerId === 'Connecting...') {
+        log('Peer ID is not ready yet.', true);
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(peerId);
+        log(`Copied peer ID: ${peerId}`);
+      } catch (err) {
+        log(`Could not copy peer ID: ${err.message || err}`, true);
+      }
+    };
+
+    const applyModeDefaults = () => {
+      if (modeEl.value === 'local') {
+        hostEl.value = 'localhost';
+        portEl.value = '9000';
+        pathEl.value = '/myapp';
+        secureEl.value = 'false';
+      } else {
+        hostEl.value = '0.peerjs.com';
+        portEl.value = '443';
+        pathEl.value = '/';
+        secureEl.value = 'true';
+      }
+    };
+
+    const stopStream = (stream) => {
+      if (!stream) {
+        return;
+      }
+
+      stream.getTracks().forEach((track) => track.stop());
+    };
+
+    const setLocalStream = (stream) => {
+      stopStream(localStream);
+      localStream = stream;
+      localVideo.srcObject = stream;
+    };
+
+    const setRemoteStream = (stream) => {
+      remoteVideo.srcObject = stream;
+    };
+
+    const readFilesAsPayloads = (files) => Promise.all(Array.from(files).map((file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          kind: 'file',
+          name: file.webkitRelativePath || file.name,
+          mime: file.type || 'application/octet-stream',
+          size: file.size,
+          data: reader.result
+        });
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file);
+    })));
+
+    const sendFilePayloads = async (files, label) => {
+      if (!requireConnection()) {
+        return;
+      }
+
+      if (!files || !files.length) {
+        log(`No ${label.toLowerCase()} selected.`, true);
+        return;
+      }
+
+      const payloads = await readFilesAsPayloads(files);
+      activeConn.send({ kind: 'transfer-start', label, count: payloads.length });
+
+      for (const payload of payloads) {
+        activeConn.send(payload);
+        log(`Sent ${label.toLowerCase()}: ${payload.name}`);
+      }
+    };
+
+    const startCall = async (kind) => {
+      if (!requireConnection()) {
+        return;
+      }
+
+      const constraints = kind === 'video'
+        ? { audio: true, video: true }
+        : { audio: true, video: false };
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        setLocalStream(stream);
+
+        if (mediaConn) {
+          mediaConn.close();
+        }
+
+        mediaConn = peer.call(activeConn.peer, stream);
+        mediaConn.on('stream', (remoteStream) => {
+          setRemoteStream(remoteStream);
+          log(`${kind === 'video' ? 'Video' : 'Audio'} call connected.`);
+        });
+        mediaConn.on('close', () => log('Call closed.'));
+        mediaConn.on('error', (err) => log(`Call error: ${err.message || err}`, true));
+        log(`Starting ${kind} call to ${activeConn.peer}`);
+      } catch (err) {
+        log(`Could not start ${kind} call: ${err.message || err}`, true);
+      }
+    };
+
+    const makePeer = () => {
+      if (peer) {
+        try {
+          peer.destroy();
+        } catch (err) {
+          log(`Destroy warning: ${err.message || err}`, true);
+        }
+      }
+
+      activeConn = null;
+      setConnState('Not connected');
+      myIdEl.textContent = 'Connecting...';
+
+      const secure = secureEl.value.trim().toLowerCase() !== 'false';
+      const options = {
+        host: hostEl.value.trim(),
+        port: Number(portEl.value.trim() || 443),
+        path: pathEl.value.trim() || '/',
+        secure
+      };
+
+      log(`Connecting with ${JSON.stringify(options)}`);
+      peer = new Peer(options);
+
+      peer.on('open', (id) => {
+        myIdEl.textContent = id;
+        log(`Peer ready. ID: ${id}`);
+      });
+
+      peer.on('connection', (conn) => {
+        log(`Incoming connection from ${conn.peer}`);
+        conn.on('open', () => wireConnection(conn));
+      });
+
+      peer.on('call', async (call) => {
+        log(`Incoming call from ${call.peer}`);
+
+        try {
+          if (!localStream) {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            setLocalStream(stream);
+          }
+
+          call.answer(localStream);
+          call.on('stream', (remoteStream) => {
+            setRemoteStream(remoteStream);
+            log(`Call stream received from ${call.peer}`);
+          });
+          call.on('close', () => log('Incoming call closed.'));
+          call.on('error', (err) => log(`Incoming call error: ${err.message || err}`, true));
+          mediaConn = call;
+        } catch (err) {
+          log(`Could not answer call: ${err.message || err}`, true);
+        }
+      });
+
+      peer.on('error', (err) => {
+        log(`Peer error: ${err.type || ''} ${err.message || err}`.trim(), true);
+      });
+    };
+
+    const connectToTarget = () => {
+      const targetId = targetIdEl.value.trim();
+      if (!targetId) {
+        log('Please enter a target peer ID first.', true);
+        return;
+      }
+
+      const conn = peer.connect(targetId);
+      conn.on('open', () => wireConnection(conn));
+    };
+
+    const sendCurrentMessage = () => {
+      if (!activeConn || !activeConn.open) {
+        log('No open connection. Connect first.', true);
+        return;
+      }
+
+      const message = messageEl.value.trim();
+      if (!message) {
+        log('Message is empty.', true);
+        return;
+      }
+
+      const sender = senderEl.value.trim();
+      const payload = sender ? `${sender}: ${message}` : message;
+      activeConn.send(payload);
+      log(`Sent: ${payload}`);
+      messageEl.value = '';
+    };
+
+    const wireConnection = (conn) => {
+      activeConn = conn;
+      setConnState(`Connected to ${conn.peer}`);
+      log(`Connection opened with ${conn.peer}`);
+
+      conn.on('data', (data) => {
+        log(`Received: ${typeof data === 'string' ? data : JSON.stringify(data)}`);
+      });
+
+      conn.on('close', () => {
+        log('Connection closed');
+        activeConn = null;
+        setConnState('Not connected');
+      });
+
+      conn.on('error', (err) => {
+        log(`Connection error: ${err.message || err}`, true);
+      });
+    };
+
+    modeEl.addEventListener('change', applyModeDefaults);
+    reconnectBtn.addEventListener('click', makePeer);
+    copyIdBtn.addEventListener('click', copyPeerId);
+    myIdChip.addEventListener('click', copyPeerId);
+
+    connectBtn.addEventListener('click', connectToTarget);
+
+    targetIdEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        connectToTarget();
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      logEl.textContent = '';
+      log('Cleared!');
+    });
+
+    sendBtn.addEventListener('click', sendCurrentMessage);
+    sendFilesBtn.addEventListener('click', () => sendFilePayloads(fileInput.files, 'Files'));
+    sendFolderBtn.addEventListener('click', () => sendFilePayloads(folderInput.files, 'Folder'));
+    audioCallBtn.addEventListener('click', () => startCall('audio'));
+    videoCallBtn.addEventListener('click', () => startCall('video'));
+
+    messageEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        sendCurrentMessage();
+      }
+    });
+
+    senderEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        sendCurrentMessage();
+      }
+    });
+
+    window.addEventListener('beforeunload', () => {
+      stopStream(localStream);
+    });
+
+    applyModeDefaults();
+    makePeer();
+  </script>
+</body>
+</html>
