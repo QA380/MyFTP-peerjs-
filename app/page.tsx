@@ -209,7 +209,10 @@ export default function Home() {
     }
 
     if (payload instanceof Uint8Array) {
-      return payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
+      const bytes = payload.byteLength > 0
+        ? payload.slice()
+        : new Uint8Array(0);
+      return bytes.buffer;
     }
 
     if (
