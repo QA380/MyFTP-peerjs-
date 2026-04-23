@@ -841,6 +841,9 @@ export default function Home() {
                 else if(row.text.includes("Sent:")){
                   textClass = "text-[#0096ad]"
                 }
+                else if(row.text.includes("Incoming") || row.text.includes("Received")){
+                  textClass = "text-[#00ad4e]"
+                }
                 // All remaining chat/log rows keep the default text color. (it's white)
 
                 return (
