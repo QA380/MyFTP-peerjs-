@@ -827,7 +827,10 @@ export default function Home() {
               className="mt-3 max-h-72 min-h-40 space-y-1 overflow-auto rounded-lg border border-slate-700 bg-[#030712] p-3 font-mono text-xs"
             >
               {logs.map((row) => (
-                <div key={row.id} className={row.error ? "text-rose-400" : "text-slate-200"}>
+                <div
+                  key={row.id}
+                  className={row.error ? "text-rose-400" : row.text.includes("Received:") ? "text-[#00d659]" : "text-slate-200"}
+                >
                   {row.text}
                 </div>
               ))}
