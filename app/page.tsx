@@ -1033,7 +1033,7 @@ export default function Home() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[140px_minmax(0,1fr)_120px_120px]">
                 <input
                   className={inputClass}
                   placeholder="Secure: true/false"
