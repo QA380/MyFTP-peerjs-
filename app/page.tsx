@@ -1,5 +1,6 @@
 "use client";
 
+import  { SpeedInsights } from "@vercel/speed-insights/next"
 import Peer, { DataConnection, MediaConnection } from "peerjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -30,6 +31,44 @@ type InboxItem = {
   size: number;
   mime: string;
   url: string;
+  progress: number;
+  rate: number;
+  complete: boolean;
+};
+
+type FileTransferStart = {
+  kind: "file-start";
+  transferId: string;
+  source: "Files" | "Folder";
+  name: string;
+  mime: string;
+  size: number;
+  totalChunks: number;
+};
+
+type FileTransferChunk = {
+  kind: "file-chunk";
+  transferId: string;
+  index: number;
+  data: ArrayBuffer;
+};
+
+type FileTransferEnd = {
+  kind: "file-end";
+  transferId: string;
+};
+
+type ActiveInboxTransfer = {
+  id: string;
+  source: "Files" | "Folder";
+  name: string;
+  mime: string;
+  size: number;
+  receivedBytes: number;
+  chunks: ArrayBuffer[];
+  startedAt: number;
+  lastTick: number;
+  totalChunks: number;
 };
 
 const formatBytes = (bytes: number): string => {
@@ -49,6 +88,7 @@ const inputClass =
   "w-full rounded-xl border border-slate-700 bg-[#030712]/80 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-400";
 const buttonClass =
   "rounded-xl bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400";
+const FILE_CHUNK_SIZE = 64 * 1024;
 
 export default function Home() {
   const [mode, setMode] = useState<"cloud" | "local">("cloud");
@@ -87,6 +127,7 @@ export default function Home() {
   const animationFrameRef = useRef<number | null>(null);
   const incomingTransferLabelRef = useRef<"Files" | "Folder">("Files");
   const inboxItemsRef = useRef<InboxItem[]>([]);
+  const activeInboxTransfersRef = useRef<Map<string, ActiveInboxTransfer>>(new Map());
 
   const modeHint = useMemo(
     () => "For local mode, use host localhost, port 9000, path /myapp, secure false.",
@@ -190,6 +231,99 @@ export default function Home() {
     []
   );
 
+  const chunkArrayBuffer = useCallback((buffer: ArrayBuffer): ArrayBuffer[] => {
+    if (buffer.byteLength <= FILE_CHUNK_SIZE) {
+      return [buffer];
+    }
+
+    const chunks: ArrayBuffer[] = [];
+    for (let offset = 0; offset < buffer.byteLength; offset += FILE_CHUNK_SIZE) {
+      chunks.push(buffer.slice(offset, Math.min(offset + FILE_CHUNK_SIZE, buffer.byteLength)));
+    }
+
+    return chunks;
+  }, []);
+
+  const flushInboxTransfer = useCallback((transferId: string) => {
+    const transfer = activeInboxTransfersRef.current.get(transferId);
+    if (!transfer) {
+      return;
+    }
+
+    const blob = new Blob(transfer.chunks, { type: transfer.mime });
+    const url = URL.createObjectURL(blob);
+    const elapsedSeconds = Math.max((Date.now() - transfer.startedAt) / 1000, 0.001);
+    const rate = transfer.receivedBytes / elapsedSeconds;
+
+    setInboxItems((prev) => [
+      {
+        id: transfer.id,
+        source: transfer.source,
+        name: transfer.name,
+        size: transfer.size,
+        mime: transfer.mime,
+        url,
+        progress: 1,
+        rate,
+        complete: true,
+      },
+      ...prev,
+    ]);
+
+    activeInboxTransfersRef.current.delete(transferId);
+    pushLog(`Received file ready in inbox: ${transfer.name} (${formatBytes(transfer.size)}).`);
+  }, [pushLog]);
+
+  const updateInboxTransferProgress = useCallback((transferId: string) => {
+    const transfer = activeInboxTransfersRef.current.get(transferId);
+    if (!transfer) {
+      return;
+    }
+
+    const elapsedSeconds = Math.max((Date.now() - transfer.startedAt) / 1000, 0.001);
+    const rate = transfer.receivedBytes / elapsedSeconds;
+    const progress = transfer.size > 0 ? Math.min(transfer.receivedBytes / transfer.size, 1) : 0;
+
+    setInboxItems((prev) => prev.map((item) => (
+      item.id === transferId
+        ? { ...item, progress, rate, complete: false, size: transfer.size, mime: transfer.mime, name: transfer.name, source: transfer.source }
+        : item
+    )));
+  }, []);
+
+  const beginInboxTransfer = useCallback((payload: FileTransferStart) => {
+    const exists = activeInboxTransfersRef.current.get(payload.transferId);
+    if (!exists) {
+      activeInboxTransfersRef.current.set(payload.transferId, {
+        id: payload.transferId,
+        source: payload.source,
+        name: payload.name,
+        mime: payload.mime,
+        size: payload.size,
+        receivedBytes: 0,
+        chunks: [],
+        startedAt: Date.now(),
+        lastTick: Date.now(),
+        totalChunks: payload.totalChunks,
+      });
+
+      setInboxItems((prev) => [
+        {
+          id: payload.transferId,
+          source: payload.source,
+          name: payload.name,
+          size: payload.size,
+          mime: payload.mime,
+          url: "",
+          progress: 0,
+          rate: 0,
+          complete: false,
+        },
+        ...prev,
+      ]);
+    }
+  }, []);
+
   const summarizeSelection = useCallback((files: FileList | null): SelectionInfo => {
     if (!files || files.length === 0) {
       return { count: 0, totalBytes: 0, ready: false };
@@ -248,8 +382,11 @@ export default function Home() {
   }, [pushLog]);
 
   const clearInbox = useCallback(() => {
+    activeInboxTransfersRef.current.clear();
     inboxItemsRef.current.forEach((item) => {
-      URL.revokeObjectURL(item.url);
+      if (item.url) {
+        URL.revokeObjectURL(item.url);
+      }
     });
     setInboxItems([]);
     pushLog("Cleared received inbox.");
@@ -258,9 +395,10 @@ export default function Home() {
   const removeInboxItem = useCallback((id: string) => {
     setInboxItems((prev) => {
       const target = prev.find((item) => item.id === id);
-      if (target) {
+      if (target && target.url) {
         URL.revokeObjectURL(target.url);
       }
+      activeInboxTransfersRef.current.delete(id);
       return prev.filter((item) => item.id !== id);
     });
   }, []);
@@ -285,6 +423,9 @@ export default function Home() {
             name?: string;
             mime?: string;
             size?: number;
+            transferId?: string;
+            totalChunks?: number;
+            index?: number;
             data?: unknown;
           };
 
@@ -295,30 +436,43 @@ export default function Home() {
             return;
           }
 
-          if (payload.kind === "file") {
+          if (payload.kind === "file-start" && payload.transferId && payload.name && payload.mime) {
+            beginInboxTransfer({
+              kind: "file-start",
+              transferId: payload.transferId,
+              source: payload.label === "Folder" ? "Folder" : "Files",
+              name: payload.name,
+              mime: payload.mime,
+              size: payload.size ?? 0,
+              totalChunks: payload.totalChunks ?? 0,
+            });
+            return;
+          }
+
+          if (payload.kind === "file-chunk" && payload.transferId) {
+            const transfer = activeInboxTransfersRef.current.get(payload.transferId);
             const buffer = extractArrayBuffer(payload.data);
-            if (!buffer) {
-              pushLog(`Received file metadata but could not parse binary data for ${payload.name ?? "unknown"}.`, true);
+            if (!transfer || !buffer) {
+              pushLog(`Received file chunk that could not be attached to a transfer.`, true);
               return;
             }
 
-            const mime = payload.mime || "application/octet-stream";
-            const blob = new Blob([buffer], { type: mime });
-            const url = URL.createObjectURL(blob);
-            const size = typeof payload.size === "number" ? payload.size : blob.size;
+            transfer.chunks.push(buffer);
+            transfer.receivedBytes += buffer.byteLength;
+            transfer.lastTick = Date.now();
 
-            setInboxItems((prev) => [
-              {
-                id: `${Date.now()}-${Math.random()}`,
-                source: incomingTransferLabelRef.current,
-                name: payload.name || "unnamed-file",
-                size,
-                mime,
-                url,
-              },
-              ...prev,
-            ]);
-            pushLog(`Received file ready in inbox: ${payload.name || "unnamed-file"} (${formatBytes(size)}).`);
+            updateInboxTransferProgress(payload.transferId);
+            return;
+          }
+
+          if (payload.kind === "file-end" && payload.transferId) {
+            const transfer = activeInboxTransfersRef.current.get(payload.transferId);
+            if (!transfer) {
+              pushLog(`Received file end without a matching transfer.`, true);
+              return;
+            }
+
+            flushInboxTransfer(payload.transferId);
             return;
           }
         }
@@ -465,16 +619,45 @@ export default function Home() {
       }
 
       const payloads = await readFilesAsPayloads(files);
-      activeConnRef.current?.send({ kind: "transfer-start", label, count: payloads.length });
 
       for (const payload of payloads) {
-        activeConnRef.current?.send(payload);
-        pushLog(`Sent ${label.toLowerCase()}: ${payload.name}`);
+        const transferId = `${Date.now()}-${Math.random()}`;
+        const chunks = chunkArrayBuffer(payload.data);
+
+        activeConnRef.current?.send({
+          kind: "file-start",
+          transferId,
+          source: label,
+          name: payload.name,
+          mime: payload.mime,
+          size: payload.size,
+          totalChunks: chunks.length,
+        } satisfies FileTransferStart);
+
+        for (let index = 0; index < chunks.length; index += 1) {
+          activeConnRef.current?.send({
+            kind: "file-chunk",
+            transferId,
+            index,
+            data: chunks[index],
+          } satisfies FileTransferChunk);
+
+          // Yield between chunks so chat messages stay responsive while files are sending.
+          // This also reduces blocking on the shared PeerJS data channel.
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+        }
+
+        activeConnRef.current?.send({
+          kind: "file-end",
+          transferId,
+        } satisfies FileTransferEnd);
+
+        pushLog(`Sent ${label.toLowerCase()}: ${payload.name} (${formatBytes(payload.size)})`);
       }
 
       pushLog(`${label} upload complete. ${payloads.length} item(s) sent successfully.`);
     },
-    [pushLog, readFilesAsPayloads, requireConnection]
+    [chunkArrayBuffer, pushLog, readFilesAsPayloads, requireConnection]
   );
 
   const startCall = useCallback(
@@ -609,7 +792,9 @@ export default function Home() {
       stopAudioMeter();
       clearMediaStreams();
       inboxItemsRef.current.forEach((item) => {
-        URL.revokeObjectURL(item.url);
+        if (item.url) {
+          URL.revokeObjectURL(item.url);
+        }
       });
     };
   }, [clearMediaStreams, makePeer, stopAudioMeter, stopStream]);
@@ -1023,8 +1208,21 @@ export default function Home() {
                         <p className="text-slate-400">
                           {item.source} | {formatBytes(item.size)}
                         </p>
+                        <p className="text-slate-400">
+                          Transfer rate: {formatBytes(Math.max(item.rate, 0))}/s
+                        </p>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+                          <div
+                            className="h-full rounded-full bg-cyan-400 transition-all duration-150"
+                            style={{ width: `${Math.min(Math.max(item.progress * 100, 0), 100)}%` }}
+                          />
+                        </div>
+                        <p className={item.complete ? "mt-2 text-emerald-300" : "mt-2 text-slate-400"}>
+                          {item.complete ? "Transfer complete and ready." : `Receiving... ${Math.round(item.progress * 100)}%`}
+                        </p>
                         <div className="mt-2 flex gap-2">
                           <a
+                            aria-disabled={!item.complete}
                             className="rounded-lg border border-cyan-500/40 bg-cyan-500/15 px-2 py-1 font-semibold text-cyan-200 transition hover:bg-cyan-500/25"
                             href={item.url}
                             download={item.name}
