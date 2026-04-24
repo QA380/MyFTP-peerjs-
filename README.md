@@ -19,7 +19,7 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 ## Notes
 **Improvement to do:**
- *   Improve UI (lowk needa rework lmao)
+ *   Improve UI
       - Improve color theme (visual)
       - Improve visual background (visual)
       - Replace/add multiple visual with animate-UI
