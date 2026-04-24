@@ -3,6 +3,7 @@
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Peer, { DataConnection, MediaConnection } from "peerjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SlidingNumber } from '@/components/animate-ui/primitives/texts/sliding-number';
 
 type LogRow = {
   id: number;

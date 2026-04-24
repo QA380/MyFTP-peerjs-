@@ -18,8 +18,8 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 **This project was inspired from [filepizza](https://github.com/kern/filepizza)**
 
 ## Notes
-**Todos:**
- *   Improve UI
+**Improvement to do:**
+ *   Improve UI (UI lowk needa rework lmao)
       - Improve color theme (visual)
       - Improve visual background (visual)
  *   Add top bar (functional)
