@@ -16,3 +16,22 @@ Or visit [`my-ftp-peerjs.vercel`](https://my-ftp-peerjs.vercel.app/) to see the 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 **This project was inspired from [filepizza](https://github.com/kern/filepizza)**
+
+
+/** Personal notes
+ * 
+ * Todos:
+ * - Improve UI
+ *    - Improve color theme (visual)
+ *    - Improve visual background (visual)
+ * - Add top bar (functional)
+ *    - Add: Home | X | X |
+ * 
+ * 
+ * 
+ * Fix:
+ * - Inbox received double the notifaction for single file
+ * - Toggling audio-video reset the connection
+ * - 
+ * 
+ */
