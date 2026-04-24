@@ -1623,8 +1623,8 @@ export default function Home() {
               </p>
 
               <div className="rounded-lg border border-slate-700 bg-[#030712] px-3 py-2 text-xs text-slate-300">
-                <p className="font-monospace uppercase tracking-wide text-slate-300">Connection Diagnostics</p>
-                <p className={`font-monospace ${diagnostics.dataChannelState === "open" ? "text-emerald-300" : "text-amber-300"}`}>
+                <p className="font-mono uppercase tracking-wide text-slate-300">Connection Diagnostics</p>
+                <p className={`font-mono ${diagnostics.dataChannelState === "open" ? "text-emerald-300" : "text-amber-300"}`}>
                   Data channel: {diagnostics.dataChannelState}
                 </p>
                 <p className={diagnostics.bufferedAmount > BUFFER_HIGH_WATERMARK ? "text-rose-300" : "text-emerald-300"}>
