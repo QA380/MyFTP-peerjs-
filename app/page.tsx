@@ -84,6 +84,13 @@ type OutgoingItem = {
   complete: boolean;
 };
 
+type ConnectionDiagnostics = {
+  dataChannelState: string;
+  bufferedAmount: number;
+  rttMs: number | null;
+  route: "direct" | "relay" | "unknown";
+};
+
 const formatBytes = (bytes: number): string => {
   if (bytes <= 0) {
     return "0 B";
@@ -104,6 +111,13 @@ const buttonClass =
 const FILE_CHUNK_SIZE = 64 * 1024;
 const BUFFER_HIGH_WATERMARK = FILE_CHUNK_SIZE * 32;
 const BUFFER_CHECK_INTERVAL_MS = 10;
+
+const formatLatency = (rttMs: number | null): string => {
+  if (rttMs === null || Number.isNaN(rttMs)) {
+    return "n/a";
+  }
+  return `${Math.round(rttMs)} ms`;
+};
 
 type WorkerInboundMessage = {
   type: "prepare-file";
@@ -160,6 +174,12 @@ export default function Home() {
   const [folderSelection, setFolderSelection] = useState<SelectionInfo>({ count: 0, totalBytes: 0, ready: false });
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
   const [sendingItems, setSendingItems] = useState<OutgoingItem[]>([]);
+  const [diagnostics, setDiagnostics] = useState<ConnectionDiagnostics>({
+    dataChannelState: "closed",
+    bufferedAmount: 0,
+    rttMs: null,
+    route: "unknown",
+  });
 
   const peerRef = useRef<Peer | null>(null);
   const activeConnRef = useRef<DataConnection | null>(null);
@@ -276,6 +296,19 @@ export default function Home() {
     };
 
     return candidate.dataChannel ?? candidate._dc ?? null;
+  }, []);
+
+  const getRtcPeerConnection = useCallback((conn: DataConnection | null): RTCPeerConnection | null => {
+    if (!conn) {
+      return null;
+    }
+
+    const candidate = conn as DataConnection & {
+      peerConnection?: RTCPeerConnection;
+      _pc?: RTCPeerConnection;
+    };
+
+    return candidate.peerConnection ?? candidate._pc ?? null;
   }, []);
 
   const waitForBufferedDrain = useCallback(
@@ -1075,6 +1108,100 @@ export default function Home() {
   }, [drainWorkerQueue, pushLog]);
 
   useEffect(() => {
+    let timer: number | null = null;
+
+    const updateDiagnostics = async () => {
+      const conn = activeConnRef.current;
+      const channel = getRtcDataChannel(conn);
+      const peerConnection = getRtcPeerConnection(conn);
+
+      if (!conn || !channel || !conn.open) {
+        setDiagnostics({
+          dataChannelState: channel?.readyState ?? "closed",
+          bufferedAmount: 0,
+          rttMs: null,
+          route: "unknown",
+        });
+        return;
+      }
+
+      let rttMs: number | null = null;
+      let route: "direct" | "relay" | "unknown" = "unknown";
+
+      if (peerConnection) {
+        try {
+          const stats = await peerConnection.getStats();
+          const reports = Array.from(stats.values());
+          const candidatePair = reports.find((report) => {
+            return (
+              report.type === "candidate-pair" &&
+              (report as RTCStats & { state?: string; selected?: boolean }).state === "succeeded" &&
+              (report as RTCStats & { nominated?: boolean; selected?: boolean }).nominated
+            );
+          }) as (RTCStats & {
+            currentRoundTripTime?: number;
+            selected?: boolean;
+            localCandidateId?: string;
+            remoteCandidateId?: string;
+          }) | undefined;
+
+          const selectedPair =
+            candidatePair ??
+            (reports.find((report) => {
+              return (
+                report.type === "candidate-pair" &&
+                (report as RTCStats & { selected?: boolean }).selected
+              );
+            }) as (RTCStats & {
+              currentRoundTripTime?: number;
+              localCandidateId?: string;
+              remoteCandidateId?: string;
+            }) | undefined);
+
+          if (selectedPair?.currentRoundTripTime !== undefined) {
+            rttMs = selectedPair.currentRoundTripTime * 1000;
+          }
+
+          if (selectedPair?.localCandidateId || selectedPair?.remoteCandidateId) {
+            const localCandidate = reports.find((report) => report.id === selectedPair.localCandidateId) as
+              | (RTCStats & { candidateType?: string })
+              | undefined;
+            const remoteCandidate = reports.find((report) => report.id === selectedPair.remoteCandidateId) as
+              | (RTCStats & { candidateType?: string })
+              | undefined;
+
+            if (localCandidate?.candidateType === "relay" || remoteCandidate?.candidateType === "relay") {
+              route = "relay";
+            } else if (localCandidate?.candidateType || remoteCandidate?.candidateType) {
+              route = "direct";
+            }
+          }
+        } catch {
+          // Stats can fail in some browsers; keep previous-friendly fallback values.
+        }
+      }
+
+      setDiagnostics({
+        dataChannelState: channel.readyState,
+        bufferedAmount: channel.bufferedAmount,
+        rttMs,
+        route,
+      });
+    };
+
+    void updateDiagnostics();
+    timer = window.setInterval(() => {
+      void updateDiagnostics();
+    }, 1000);
+
+    return () => {
+      if (timer !== null) {
+        window.clearInterval(timer);
+      }
+    };
+  }, [connState, getRtcDataChannel, getRtcPeerConnection]);
+
+  useEffect(() => {
     const peerInitTimer = window.setTimeout(() => {
       makePeer();
     }, 0);
@@ -1323,6 +1450,16 @@ export default function Home() {
               <p className="text-sm text-slate-300">
                 Connection: <strong className="text-slate-100">{connState}</strong>
               </p>
+
+              <div className="rounded-lg border border-slate-700 bg-[#030712] px-3 py-2 text-xs text-slate-300">
+                <p className="font-semibold uppercase tracking-wide text-slate-300">Connection Diagnostics</p>
+                <p>Data channel: {diagnostics.dataChannelState}</p>
+                <p>Buffered outbound: {formatBytes(diagnostics.bufferedAmount)}</p>
+                <p>Estimated RTT: {formatLatency(diagnostics.rttMs)}</p>
+                <p>
+                  Route: {diagnostics.route === "unknown" ? "Unknown" : diagnostics.route === "relay" ? "Relay" : "Direct"}
+                </p>
+              </div>
             </section>
           </div>
 
