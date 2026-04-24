@@ -19,11 +19,19 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 ## Notes
 **Improvement to do:**
- *   Improve UI (UI lowk needa rework lmao)
+ *   Improve UI (lowk needa rework lmao)
       - Improve color theme (visual)
       - Improve visual background (visual)
+      - Replace/add multiple visual with animate-UI
+            - File inbox and send pool
+            - Progress bar
+            - Notification bar
+            - 
+
+
  *   Add top bar (functional)
-      - Add: Home | X | X |
+      - Add: Home | Main |File Transfer | Direct Call |
+        dedicated feature for specific function
 
  **Fix:**
  * Inbox received double the notifaction for single file

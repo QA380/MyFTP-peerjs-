@@ -1623,7 +1623,7 @@ export default function Home() {
               </p>
 
               <div className="rounded-lg border border-slate-700 bg-[#030712] px-3 py-2 text-xs text-slate-300">
-                <p className="font-semibold uppercase tracking-wide text-slate-300">Connection Diagnostics</p>
+                <p className="font-mono uppercase tracking-wide text-slate-300">Connection Diagnostics</p>
                 <p className={diagnostics.dataChannelState === "open" ? "text-emerald-300" : "text-amber-300"}>
                   Data channel: {diagnostics.dataChannelState}
                 </p>
@@ -1687,7 +1687,7 @@ export default function Home() {
 
         {/* Right-side workspace for calls, media previews, and file transfer tools */}
         <main className="space-y-4 rounded-2xl border border-slate-800 bg-[#030712]/85 p-5 backdrop-blur">
-          <h1 className="text-2xl font-bold tracking-tight">PeerJS Call</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Extra Functions</h1>
 
           {/* Call controls plus local and remote video panes */}
           <section className="rounded-xl border border-slate-800 bg-[#030712]/50 p-3">
