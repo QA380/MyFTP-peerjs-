@@ -228,6 +228,21 @@ type TreeNode = {
 
 const normalizePathParts = (path: string) => path.replaceAll("\\", "/").split("/").filter(Boolean);
 
+const PEER_ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+const generateSimplePeerId = (length = 8): string => {
+  const randomValues = new Uint32Array(length);
+  crypto.getRandomValues(randomValues);
+
+  return Array.from(randomValues, (value) => PEER_ID_ALPHABET[value % PEER_ID_ALPHABET.length]).join("");
+};
+
+const buildShareLink = (peerId: string): string => {
+  const url = new URL(window.location.href);
+  url.searchParams.set("peer", peerId);
+  return url.toString();
+};
+
 const triggerBrowserDownload = (url: string, fileName: string) => {
   const link = document.createElement("a");
   link.href = url;
@@ -525,6 +540,22 @@ export default function Home() {
     () => "For localhost, use port 9000, path /myapp, secure false.",
     []
   );
+
+  const peerShareLink = useMemo(() => {
+    if (typeof window === "undefined" || !myId || myId === "Connecting...") {
+      return "";
+    }
+
+    return buildShareLink(myId);
+  }, [myId]);
+
+  const peerShareLink = useMemo(() => {
+    if (typeof window === "undefined" || !myId || myId === "Connecting...") {
+      return "";
+    }
+
+    return buildShareLink(myId);
+  }, [myId]);
 
   const pushLog = useCallback((line: string, error = false) => {
     const stamp = new Date().toLocaleTimeString();
@@ -1209,99 +1240,112 @@ export default function Home() {
 
   // Destroy and recreate the PeerJS client with the current server settings
   const makePeer = useCallback(() => {
-    if (peerRef.current) {
-      try {
-        peerRef.current.destroy();
-      } catch (err) {
-        pushLog(`Destroy warning: ${String(err)}`, true);
+    const connectWithId = (attempt = 0) => {
+      const desiredId = generateSimplePeerId(8);
+
+      if (peerRef.current) {
+        try {
+          peerRef.current.destroy();
+        } catch (err) {
+          pushLog(`Destroy warning: ${String(err)}`, true);
+        }
       }
-    }
 
-    activeConnRef.current = null;
-    setConnState("Not connected");
-    setMyId("Connecting...");
+      activeConnRef.current = null;
+      setConnState("Not connected");
+      setMyId(desiredId);
 
-    const options = {
-      host: host.trim(),
-      port: Number(port.trim() || 443),
-      path: path.trim() || "/",
-      secure: secure.trim().toLowerCase() !== "false",
-      config: {
-        iceServers: [
-          {
-            urls: [
-              "stun:stun.l.google.com:19302",
-              "stun:stun1.l.google.com:19302",
-              "stun:stun.cloudflare.com:3478",
-            ],
-          },
-          ...(process.env.NEXT_PUBLIC_TURN_URL
-            ? [
-                {
-                  urls: process.env.NEXT_PUBLIC_TURN_URL,
-                  username: process.env.NEXT_PUBLIC_TURN_USERNAME,
-                  credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL,
-                },
-              ]
-            : []),
-        ],
-        iceTransportPolicy: "all" as RTCIceTransportPolicy,
-      },
-    };
+      const options = {
+        host: host.trim(),
+        port: Number(port.trim() || 443),
+        path: path.trim() || "/",
+        secure: secure.trim().toLowerCase() !== "false",
+        config: {
+          iceServers: [
+            {
+              urls: [
+                "stun:stun.l.google.com:19302",
+                "stun:stun1.l.google.com:19302",
+                "stun:stun.cloudflare.com:3478",
+              ],
+            },
+            ...(process.env.NEXT_PUBLIC_TURN_URL
+              ? [
+                  {
+                    urls: process.env.NEXT_PUBLIC_TURN_URL,
+                    username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+                    credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL,
+                  },
+                ]
+              : []),
+          ],
+          iceTransportPolicy: "all" as RTCIceTransportPolicy,
+        },
+      };
 
-    pushLog(
-      `Connecting with ${JSON.stringify({
-        host: options.host,
-        port: options.port,
-        path: options.path,
-        secure: options.secure,
-        hasTurnServer: Boolean(process.env.NEXT_PUBLIC_TURN_URL),
-      })}`
-    );
-    const peer = new Peer(options);
-    peerRef.current = peer;
+      pushLog(
+        `Connecting with ${JSON.stringify({
+          id: desiredId,
+          host: options.host,
+          port: options.port,
+          path: options.path,
+          secure: options.secure,
+          hasTurnServer: Boolean(process.env.NEXT_PUBLIC_TURN_URL),
+        })}`
+      );
+      const peer = new Peer(desiredId, options);
+      peerRef.current = peer;
 
-    peer.on("open", (id) => {
-      setMyId(id);
-      pushLog(`Peer ready. ID: ${id}`);
-    });
+      peer.on("open", (id) => {
+        setMyId(id);
+        pushLog(`Peer ready. ID: ${id}`);
+      });
 
-    peer.on("connection", (conn) => {
-      setNotifications((prev) => ({ ...prev, connection: true }));
-      pushLog(`Incoming connection from ${conn.peer}`);
-      conn.on("open", () => wireConnection(conn));
-    });
+      peer.on("connection", (conn) => {
+        setNotifications((prev) => ({ ...prev, connection: true }));
+        pushLog(`Incoming connection from ${conn.peer}`);
+        conn.on("open", () => wireConnection(conn));
+      });
 
-    peer.on("call", async (call) => {
-      setNotifications((prev) => ({ ...prev, call: true }));
-      pushLog(`Incoming call from ${call.peer}`);
-      try {
-        if (!localStreamRef.current) {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-          setLocalStream(stream);
+      peer.on("call", async (call) => {
+        setNotifications((prev) => ({ ...prev, call: true }));
+        pushLog(`Incoming call from ${call.peer}`);
+        try {
+          if (!localStreamRef.current) {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            setLocalStream(stream);
+          }
+
+          call.answer(localStreamRef.current ?? undefined);
+          call.on("stream", (remoteStream) => {
+            setRemoteStream(remoteStream);
+            setCallType(remoteStream.getVideoTracks().length > 0 ? "video" : "audio");
+            pushLog(`Call stream received from ${call.peer}`);
+          });
+          call.on("close", () => {
+            setCallType(null);
+            clearMediaStreams();
+            pushLog("Incoming call closed.");
+          });
+          call.on("error", (err) => pushLog(`Incoming call error: ${err.message || err}`, true));
+          mediaConnRef.current = call;
+        } catch (err) {
+          pushLog(`Could not answer call: ${String(err)}`, true);
+        }
+      });
+
+      peer.on("error", (err) => {
+        if ((err as { type?: string }).type === "unavailable-id" && attempt < 2) {
+          pushLog("Peer ID collision detected. Generating a new ID...", true);
+          connectWithId(attempt + 1);
+          return;
         }
 
-        call.answer(localStreamRef.current ?? undefined);
-        call.on("stream", (remoteStream) => {
-          setRemoteStream(remoteStream);
-          setCallType(remoteStream.getVideoTracks().length > 0 ? "video" : "audio");
-          pushLog(`Call stream received from ${call.peer}`);
-        });
-        call.on("close", () => {
-          setCallType(null);
-          clearMediaStreams();
-          pushLog("Incoming call closed.");
-        });
-        call.on("error", (err) => pushLog(`Incoming call error: ${err.message || err}`, true));
-        mediaConnRef.current = call;
-      } catch (err) {
-        pushLog(`Could not answer call: ${String(err)}`, true);
-      }
-    });
+        pushLog(`Peer error: ${err.type || ""} ${err.message || err}`.trim(), true);
+      });
+    };
 
-    peer.on("error", (err) => {
-      pushLog(`Peer error: ${err.type || ""} ${err.message || err}`.trim(), true);
-    });
+    connectWithId();
   }, [clearMediaStreams, host, path, port, pushLog, secure, setLocalStream, setRemoteStream, wireConnection]);
 
   // Apply the cloud or local defaults when the mode changes
@@ -1578,6 +1622,34 @@ export default function Home() {
     }
   }, [myId, pushLog]);
 
+  const copyShareLink = useCallback(async () => {
+    if (!peerShareLink) {
+      pushLog("Peer share link is not ready yet.", true);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(peerShareLink);
+      pushLog("Copied share link.");
+    } catch (err) {
+      pushLog(`Could not copy share link: ${String(err)}`, true);
+    }
+  }, [peerShareLink, pushLog]);
+
+  const copyShareLink = useCallback(async () => {
+    if (!peerShareLink) {
+      pushLog("Peer share link is not ready yet.", true);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(peerShareLink);
+      pushLog("Copied share link.");
+    } catch (err) {
+      pushLog(`Could not copy share link: ${String(err)}`, true);
+    }
+  }, [peerShareLink, pushLog]);
+
   // Start/stop worker when the component unmounts
   useEffect(() => {
     const worker = new Worker("/workers/transfer-worker.js");
@@ -1699,6 +1771,11 @@ export default function Home() {
 
   // Build the PeerJS client when the page first loads (skeleton)
   useEffect(() => {
+    const sharedPeerId = new URLSearchParams(window.location.search).get("peer");
+    if (sharedPeerId) {
+      setTargetId(sharedPeerId);
+    }
+
     const peerInitTimer = window.setTimeout(() => {
       makePeer();
     }, 0);
@@ -1962,6 +2039,14 @@ export default function Home() {
                   {myId}
                 </button>
               </div>
+
+              <button
+                className="w-full rounded-xl border border-slate-700 bg-[#030712] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-[#111827]"
+                onClick={copyShareLink}
+                type="button"
+              >
+                Share link
+              </button>
             </section>
 
             {/* Show current connection state, connect/disconnect, and live route stats */}
