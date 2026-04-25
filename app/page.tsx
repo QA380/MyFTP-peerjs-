@@ -2073,7 +2073,7 @@ export default function Home() {
                 DO NOT Close this tab, if you want to continue transfer.
               </p>
 
-              <div className="grid gap-3 xl:grid-cols-2">
+              <div className="grid gap-3">
                 <TreePanel
                   title="Uploaded File List"
                   emptyLabel="No uploaded files or folders yet"
