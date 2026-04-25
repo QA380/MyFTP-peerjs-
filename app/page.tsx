@@ -5,7 +5,7 @@ import Peer, { DataConnection, MediaConnection } from "peerjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Progress } from "@/components/animate-ui/components/radix/progress";
 import { Files, FileItem, FolderContent, FolderItem, FolderTrigger, SubFiles } from "@/components/animate-ui/components/radix/files";
-import { House, Phone, Folder, Mic, MicOff, Video, VideoOff, Plus, X, Bell } from "lucide-react";
+import { House, Phone, Folder, Mic, MicOff, Video, VideoOff, Plus, X, Bell, Download } from "lucide-react";
 
 type LogRow = {
   id: number;
@@ -227,6 +227,39 @@ type TreeNode = {
 
 const normalizePathParts = (path: string) => path.replaceAll("\\", "/").split("/").filter(Boolean);
 
+const triggerBrowserDownload = (url: string, fileName: string) => {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
+
+const writeBlobToDirectory = async (
+  directory: FileSystemDirectoryHandle,
+  relativePath: string,
+  blob: Blob
+) => {
+  const parts = normalizePathParts(relativePath);
+  const fileName = parts.pop();
+
+  if (!fileName) {
+    return;
+  }
+
+  let currentDirectory = directory;
+  for (const part of parts) {
+    currentDirectory = await currentDirectory.getDirectoryHandle(part, { create: true });
+  }
+
+  const fileHandle = await currentDirectory.getFileHandle(fileName, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+};
+
 const sortTreeNodes = (nodes: TreeNode[]): TreeNode[] =>
   nodes
     .sort((left, right) => {
@@ -282,7 +315,15 @@ const buildTreeFromEntries = (entries: TreeEntry[]): TreeNode[] => {
   return sortTreeNodes(roots);
 };
 
-function TreeNodeRow({ node, onDelete }: { node: TreeNode; onDelete?: (path: string) => void }) {
+function TreeNodeRow({
+  node,
+  onDelete,
+  onDownloadFolder,
+}: {
+  node: TreeNode;
+  onDelete?: (path: string) => void;
+  onDownloadFolder?: (path: string) => void;
+}) {
   if (node.isFolder) {
     return (
       <FolderItem value={node.path}>
@@ -290,16 +331,28 @@ function TreeNodeRow({ node, onDelete }: { node: TreeNode; onDelete?: (path: str
           <FolderTrigger className="min-w-0 flex-1 whitespace-normal break-words">
             {node.name}
           </FolderTrigger>
-          {onDelete && (
-            <button
-              className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
-              onClick={() => onDelete(node.path)}
-              title="Delete"
-              type="button"
-            >
-              <X className="size-3" />
-            </button>
-          )}
+          <div className="flex shrink-0 items-center gap-1">
+            {onDownloadFolder && (
+              <button
+                className="rounded p-1 text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
+                onClick={() => onDownloadFolder(node.path)}
+                title="Download folder"
+                type="button"
+              >
+                <Download className="size-3" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                className="rounded p-1 text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
+                onClick={() => onDelete(node.path)}
+                title="Delete"
+                type="button"
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </div>
         </div>
         <FolderContent>
           <SubFiles
@@ -307,7 +360,12 @@ function TreeNodeRow({ node, onDelete }: { node: TreeNode; onDelete?: (path: str
             defaultOpen={node.children.filter((child) => child.isFolder).map((child) => child.path)}
           >
             {node.children.map((child) => (
-              <TreeNodeRow key={child.path} node={child} onDelete={onDelete} />
+              <TreeNodeRow
+                key={child.path}
+                node={child}
+                onDelete={onDelete}
+                onDownloadFolder={onDownloadFolder}
+              />
             ))}
           </SubFiles>
         </FolderContent>
@@ -340,11 +398,13 @@ function TreePanel({
   emptyLabel,
   entries,
   onDelete,
+  onDownloadFolder,
 }: {
   title: string;
   emptyLabel: string;
   entries: TreeEntry[];
   onDelete?: (path: string) => void;
+  onDownloadFolder?: (path: string) => void;
 }) {
   const tree = useMemo(() => buildTreeFromEntries(entries), [entries]);
 
@@ -360,7 +420,7 @@ function TreePanel({
       ) : (
         <Files className="rounded-lg border border-slate-800 bg-[#0a1324] p-2" defaultOpen={tree.filter((node) => node.isFolder).map((node) => node.path)}>
           {tree.map((node) => (
-            <TreeNodeRow key={node.path} node={node} onDelete={onDelete} />
+            <TreeNodeRow key={node.path} node={node} onDelete={onDelete} onDownloadFolder={onDownloadFolder} />
           ))}
         </Files>
       )}
@@ -907,6 +967,93 @@ export default function Home() {
     setUploadedFolderFiles([]);
     pushLog("Removed uploaded folder selection.");
   }, [pushLog]);
+
+  const downloadInboxFile = useCallback((item: InboxItem) => {
+    if (!item.complete || !item.url) {
+      return;
+    }
+
+    triggerBrowserDownload(item.url, item.name.split("/").pop() ?? item.name);
+  }, []);
+
+  const downloadInboxFolder = useCallback(async (folderPath: string, targetDirectory?: FileSystemDirectoryHandle) => {
+    const folderItems = inboxItemsRef.current.filter(
+      (item) => item.complete && item.url && item.source === "Folder" && item.name.startsWith(`${folderPath}/`)
+    );
+
+    if (folderItems.length === 0) {
+      pushLog(`No received files found for folder ${folderPath}.`, true);
+      return;
+    }
+
+    let selectedDirectory = targetDirectory;
+    if (!selectedDirectory) {
+      const picker = (window as Window & {
+        showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
+      }).showDirectoryPicker;
+
+      if (!picker) {
+        pushLog("This browser does not support folder downloads.", true);
+        return;
+      }
+
+      selectedDirectory = await picker();
+    }
+
+    let rootDirectory = selectedDirectory;
+    for (const part of normalizePathParts(folderPath)) {
+      rootDirectory = await rootDirectory.getDirectoryHandle(part, { create: true });
+    }
+
+    for (const item of folderItems) {
+      const relativePath = item.name.slice(folderPath.length + 1);
+      const response = await fetch(item.url);
+      const blob = await response.blob();
+      await writeBlobToDirectory(rootDirectory, relativePath, blob);
+    }
+
+    pushLog(`Downloaded folder ${folderPath} with ${folderItems.length} file(s).`);
+  }, [pushLog]);
+
+  const downloadAll = useCallback(async () => {
+    const downloadable = inboxItemsRef.current.filter((item) => item.complete && item.url);
+
+    if (downloadable.length === 0) {
+      pushLog("No completed inbox items to download.");
+      return;
+    }
+
+    const folderRoots = new Set(
+      downloadable
+        .filter((item) => item.source === "Folder" && item.name.includes("/"))
+        .map((item) => normalizePathParts(item.name)[0])
+        .filter((root): root is string => Boolean(root))
+    );
+
+    let folderTargetDirectory: FileSystemDirectoryHandle | undefined;
+    if (folderRoots.size > 0) {
+      const picker = (window as Window & {
+        showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
+      }).showDirectoryPicker;
+
+      if (!picker) {
+        pushLog("This browser does not support folder downloads.", true);
+        return;
+      }
+
+      folderTargetDirectory = await picker();
+    }
+
+    for (const folderRoot of folderRoots) {
+      await downloadInboxFolder(folderRoot, folderTargetDirectory);
+    }
+
+    downloadable
+      .filter((item) => item.source !== "Folder" || !item.name.includes("/"))
+      .forEach((item) => downloadInboxFile(item));
+
+    pushLog(`Downloading ${downloadable.length} received file(s).`);
+  }, [downloadInboxFile, downloadInboxFolder, pushLog]);
 
   // Clear inbox
   const clearInbox = useCallback(() => {
@@ -2099,6 +2246,9 @@ export default function Home() {
                   onDelete={(path) => {
                     setInboxItems((prev) => prev.filter((item) => !(item.name === path || item.name.startsWith(`${path}/`))));
                   }}
+                  onDownloadFolder={(path) => {
+                    void downloadInboxFolder(path);
+                  }}
                 />
               </div>
 
@@ -2145,6 +2295,14 @@ export default function Home() {
               <div className="mt-2 rounded-lg border border-slate-700 bg-[#030712] p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-300">Received Inbox</h3>
+                  <button
+                    className="rounded-lg border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-[#111827]"
+                    onClick={downloadAll}
+                    type="button"
+                  >
+                    Download all
+                  </button>
+                  
                   <button
                     className="rounded-lg border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-[#111827]"
                     onClick={clearInbox}
