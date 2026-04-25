@@ -477,7 +477,13 @@ export default function Home() {
   const [path, setPath] = useState("/");
   const [secure, setSecure] = useState("true");
   const [myId, setMyId] = useState("Connecting...");
-  const [targetId, setTargetId] = useState("");
+  const [targetId, setTargetId] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+
+    return new URLSearchParams(window.location.search).get("peer") ?? "";
+  });
   const [message, setMessage] = useState("");
   const [sender, setSender] = useState("");
   const [connState, setConnState] = useState("Not connected");
@@ -1725,11 +1731,6 @@ export default function Home() {
 
   // Build the PeerJS client when the page first loads (skeleton)
   useEffect(() => {
-    const sharedPeerId = new URLSearchParams(window.location.search).get("peer");
-    if (sharedPeerId) {
-      setTargetId(sharedPeerId);
-    }
-
     const peerInitTimer = window.setTimeout(() => {
       makePeer();
     }, 0);
