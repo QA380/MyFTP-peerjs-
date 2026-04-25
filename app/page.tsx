@@ -488,8 +488,6 @@ export default function Home() {
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [audioLevel, setAudioLevel] = useState(0);
   const [streamVersion, setStreamVersion] = useState(0);
-  const [fileSelection, setFileSelection] = useState<SelectionInfo>({ count: 0, totalBytes: 0, ready: false });
-  const [folderSelection, setFolderSelection] = useState<SelectionInfo>({ count: 0, totalBytes: 0, ready: false });
   const [uploadedFiles, setUploadedFiles] = useState<TreeEntry[]>([]);
   const [uploadedFolderFiles, setUploadedFolderFiles] = useState<TreeEntry[]>([]);
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
@@ -540,14 +538,6 @@ export default function Home() {
     () => "For localhost, use port 9000, path /myapp, secure false.",
     []
   );
-
-  const peerShareLink = useMemo(() => {
-    if (typeof window === "undefined" || !myId || myId === "Connecting...") {
-      return "";
-    }
-
-    return buildShareLink(myId);
-  }, [myId]);
 
   const peerShareLink = useMemo(() => {
     if (typeof window === "undefined" || !myId || myId === "Connecting...") {
@@ -1000,26 +990,6 @@ export default function Home() {
 
     return null;
   }, []);
-
-  // Clear ONE upload picker and reset its summary card
-  const clearSelectedUpload = useCallback((label: "file" | "folder") => {
-    if (label === "file") {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      setFileSelection({ count: 0, totalBytes: 0, ready: false });
-      setUploadedFiles([]);
-      pushLog("Removed uploaded file selection.");
-      return;
-    }
-
-    if (folderInputRef.current) {
-      folderInputRef.current.value = "";
-    }
-    setFolderSelection({ count: 0, totalBytes: 0, ready: false });
-    setUploadedFolderFiles([]);
-    pushLog("Removed uploaded folder selection.");
-  }, [pushLog]);
 
   const downloadInboxFile = useCallback((item: InboxItem) => {
     if (!item.complete || !item.url) {
@@ -1590,10 +1560,8 @@ export default function Home() {
       const summary = summarizeSelection(entries);
 
       if (label === "file") {
-        setFileSelection(summary);
         setUploadedFiles(entries.map((file) => ({ path: file.name, size: file.size })));
       } else {
-        setFolderSelection(summary);
         setUploadedFolderFiles(entries.map((file) => ({ path: file.webkitRelativePath || file.name, size: file.size })));
       }
 
@@ -1621,20 +1589,6 @@ export default function Home() {
       pushLog(`Could not copy peer ID: ${String(err)}`, true);
     }
   }, [myId, pushLog]);
-
-  const copyShareLink = useCallback(async () => {
-    if (!peerShareLink) {
-      pushLog("Peer share link is not ready yet.", true);
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(peerShareLink);
-      pushLog("Copied share link.");
-    } catch (err) {
-      pushLog(`Could not copy share link: ${String(err)}`, true);
-    }
-  }, [peerShareLink, pushLog]);
 
   const copyShareLink = useCallback(async () => {
     if (!peerShareLink) {
