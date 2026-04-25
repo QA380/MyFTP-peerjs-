@@ -462,7 +462,6 @@ export default function Home() {
   const [path, setPath] = useState("/");
   const [secure, setSecure] = useState("true");
   const [myId, setMyId] = useState("Connecting...");
-  const [myName, setMyName] = useState("");
   const [targetId, setTargetId] = useState("");
   const [message, setMessage] = useState("");
   const [sender, setSender] = useState("");
@@ -2007,8 +2006,8 @@ export default function Home() {
               <input
                 className={inputClass}
                 placeholder="Name (optional)"
-                value={myName}
-                onChange={(e) => setMyName(e.target.value)}
+                value={sender}
+                onChange={(e) => setSender(e.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
