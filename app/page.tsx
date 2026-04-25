@@ -1471,7 +1471,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#030712] via-[#0b1120] to-[#111827] px-4 py-8 text-slate-100 sm:px-6">
       <SpeedInsights />
-      <div className="mx-auto w-full max-w-7xl overflow-hidden rounded-2xl border border-slate-800/90 bg-[#040b18]">
+      <div className="mx-auto w-full max-w-7xl">
         <header className="border-b border-slate-800 bg-[#020617] px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -1529,7 +1529,7 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid gap-5 pt-5 lg:grid-cols-[minmax(0,1fr)_380px]">
 
         {/* Left-side workspace for connection setup, logs, and diagnostics */}
         <main className="rounded-2xl border border-slate-800 bg-[#070f1f]/80 p-5 backdrop-blur">
