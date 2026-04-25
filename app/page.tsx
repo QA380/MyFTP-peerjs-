@@ -286,11 +286,28 @@ function TreeNodeRow({ node, onDelete }: { node: TreeNode; onDelete?: (path: str
   if (node.isFolder) {
     return (
       <FolderItem value={node.path}>
-        <FolderTrigger>{node.name}</FolderTrigger>
+        <div className="flex w-full items-start justify-between gap-2 rounded-lg border border-slate-800/70 bg-[#030712]/80 px-3 py-2">
+          <FolderTrigger className="min-w-0 flex-1 whitespace-normal break-words">
+            {node.name}
+          </FolderTrigger>
+          {onDelete && (
+            <button
+              className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
+              onClick={() => onDelete(node.path)}
+              title="Delete"
+              type="button"
+            >
+              <X className="size-3" />
+            </button>
+          )}
+        </div>
         <FolderContent>
-          <SubFiles className="ml-3 border-l border-slate-800 pl-3" defaultOpen={node.children.filter((child) => child.isFolder).map((child) => child.path)}>
+          <SubFiles
+            className="ml-3 border-l border-slate-800 pl-3"
+            defaultOpen={node.children.filter((child) => child.isFolder).map((child) => child.path)}
+          >
             {node.children.map((child) => (
-              <TreeNodeRow key={child.path} node={child} />
+              <TreeNodeRow key={child.path} node={child} onDelete={onDelete} />
             ))}
           </SubFiles>
         </FolderContent>
@@ -299,9 +316,21 @@ function TreeNodeRow({ node, onDelete }: { node: TreeNode; onDelete?: (path: str
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-800/70 bg-[#030712]/80 px-3 py-2">
-      <FileItem className="truncate">{node.name}</FileItem>
-      <span className="shrink-0 text-[11px] text-slate-400">{formatBytes(node.size)}</span>
+    <div className="flex w-full items-start justify-between gap-3 rounded-lg border border-slate-800/70 bg-[#030712]/80 px-3 py-2">
+      <FileItem className="min-w-0 flex-1 whitespace-normal break-words">{node.name}</FileItem>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="text-[11px] text-slate-400">{formatBytes(node.size)}</span>
+        {onDelete && (
+          <button
+            className="rounded p-1 text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
+            onClick={() => onDelete(node.path)}
+            title="Delete"
+            type="button"
+          >
+            <X className="size-3" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -2057,8 +2086,8 @@ export default function Home() {
                   emptyLabel="No uploaded files or folders yet"
                   entries={[...uploadedFiles, ...uploadedFolderFiles]}
                   onDelete={(path) => {
-                    setUploadedFiles((prev) => prev.filter((f) => f.path !== path));
-                    setUploadedFolderFiles((prev) => prev.filter((f) => f.path !== path));
+                    setUploadedFiles((prev) => prev.filter((f) => !(f.path === path || f.path.startsWith(`${path}/`))));
+                    setUploadedFolderFiles((prev) => prev.filter((f) => !(f.path === path || f.path.startsWith(`${path}/`))));
                   }}
                 />
                 <TreePanel
@@ -2068,7 +2097,7 @@ export default function Home() {
                     .filter((item) => item.complete)
                     .map((item) => ({ path: item.name, size: item.size }))}
                   onDelete={(path) => {
-                    setInboxItems((prev) => prev.filter((item) => item.name !== path));
+                    setInboxItems((prev) => prev.filter((item) => !(item.name === path || item.name.startsWith(`${path}/`))));
                   }}
                 />
               </div>
