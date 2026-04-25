@@ -282,7 +282,7 @@ const buildTreeFromEntries = (entries: TreeEntry[]): TreeNode[] => {
   return sortTreeNodes(roots);
 };
 
-function TreeNodeRow({ node }: { node: TreeNode }) {
+function TreeNodeRow({ node, onDelete }: { node: TreeNode; onDelete?: (path: string) => void }) {
   if (node.isFolder) {
     return (
       <FolderItem value={node.path}>
@@ -310,10 +310,12 @@ function TreePanel({
   title,
   emptyLabel,
   entries,
+  onDelete,
 }: {
   title: string;
   emptyLabel: string;
   entries: TreeEntry[];
+  onDelete?: (path: string) => void;
 }) {
   const tree = useMemo(() => buildTreeFromEntries(entries), [entries]);
 
@@ -329,7 +331,7 @@ function TreePanel({
       ) : (
         <Files className="rounded-lg border border-slate-800 bg-[#0a1324] p-2" defaultOpen={tree.filter((node) => node.isFolder).map((node) => node.path)}>
           {tree.map((node) => (
-            <TreeNodeRow key={node.path} node={node} />
+            <TreeNodeRow key={node.path} node={node} onDelete={onDelete} />
           ))}
         </Files>
       )}
@@ -351,6 +353,7 @@ export default function Home() {
   const [path, setPath] = useState("/");
   const [secure, setSecure] = useState("true");
   const [myId, setMyId] = useState("Connecting...");
+    const [myName, setMyName] = useState("");
   const [targetId, setTargetId] = useState("");
   const [message, setMessage] = useState("");
   const [sender, setSender] = useState("");
@@ -1720,6 +1723,13 @@ export default function Home() {
                 </button>
               </div>
 
+              <input
+                className={inputClass}
+                placeholder="Your Name"
+                value={myName}
+                onChange={(e) => setMyName(e.target.value)}
+              />
+
               <p className="text-xs text-slate-400">{modeHint}</p>
               <p className="text-xs text-slate-500">
                 Direct P2P is preferred via STUN. Set NEXT_PUBLIC_TURN_URL, NEXT_PUBLIC_TURN_USERNAME, and NEXT_PUBLIC_TURN_CREDENTIAL only when relay is required.
@@ -2020,23 +2030,6 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="rounded-lg border border-slate-700 bg-[#030712] px-3 py-2 text-xs text-slate-300">
-                <p>
-                  Files: {fileSelection.count} item(s), {formatBytes(fileSelection.totalBytes)}
-                </p>
-                <p className={fileSelection.ready ? "text-emerald-300" : "text-slate-400"}>
-                  {fileSelection.ready ? "Files uploaded and ready to send." : "No files uploaded yet."}
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-slate-700 bg-[#030712] px-3 py-2 text-xs text-slate-300">
-                <p>
-                  Folder: {folderSelection.count} item(s), {formatBytes(folderSelection.totalBytes)}
-                </p>
-                <p className={folderSelection.ready ? "text-emerald-300" : "text-slate-400"}>
-                  {folderSelection.ready ? "Folder uploaded and ready to send." : "No folder uploaded yet."}
-                </p>
-              </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -2053,22 +2046,7 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  className="rounded-xl border border-slate-700 bg-[#030712] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-[#111827]"
-                  onClick={() => clearSelectedUpload("file")}
-                  type="button"
-                >
-                  Remove Files Upload
-                </button>
-                <button
-                  className="rounded-xl border border-slate-700 bg-[#030712] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-[#111827]"
-                  onClick={() => clearSelectedUpload("folder")}
-                  type="button"
-                >
-                  Remove Folder Upload
-                </button>
-              </div>
+
               <p className="text-xs text-slate-500">
                 DO NOT Close this tab, if you want to continue transfer.
               </p>
@@ -2078,6 +2056,10 @@ export default function Home() {
                   title="Uploaded File List"
                   emptyLabel="No uploaded files or folders yet"
                   entries={[...uploadedFiles, ...uploadedFolderFiles]}
+                  onDelete={(path) => {
+                    setUploadedFiles((prev) => prev.filter((f) => f.path !== path));
+                    setUploadedFolderFiles((prev) => prev.filter((f) => f.path !== path));
+                  }}
                 />
                 <TreePanel
                   title="Received File List"
@@ -2085,6 +2067,9 @@ export default function Home() {
                   entries={inboxItems
                     .filter((item) => item.complete)
                     .map((item) => ({ path: item.name, size: item.size }))}
+                  onDelete={(path) => {
+                    setInboxItems((prev) => prev.filter((item) => item.name !== path));
+                  }}
                 />
               </div>
 
