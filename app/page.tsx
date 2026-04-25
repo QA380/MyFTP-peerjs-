@@ -3,10 +3,9 @@
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Peer, { DataConnection, MediaConnection } from "peerjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SlidingNumber } from '@/components/animate-ui/primitives/texts/sliding-number';
 import { Progress } from "@/components/animate-ui/components/radix/progress";
 import { Files, FileItem } from "@/components/animate-ui/components/radix/files";
-import { House, Phone, Folder, Mic, MicOff, Video, VideoOff, Plus, X } from "lucide-react";
+import { House, Phone, Folder, Mic, MicOff, Video, VideoOff, Plus, X, Bell } from "lucide-react";
 
 type LogRow = {
   id: number;
@@ -215,6 +214,11 @@ type WorkerOutboundMessage =
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"home" | "transfer" | "call">("home");
+  const [notifications, setNotifications] = useState({
+    call: false,
+    file: false,
+    connection: false,
+  });
   // Connection mode and server settings
   const [mode, setMode] = useState<"cloud" | "local">("cloud");
   const [host, setHost] = useState("0.peerjs.com");
@@ -772,6 +776,7 @@ export default function Home() {
     (conn: DataConnection) => {
       activeConnRef.current = conn;
       setConnState(`Connected to ${conn.peer}`);
+      setNotifications((prev) => ({ ...prev, connection: true }));
       pushLog(`Connection opened with ${conn.peer}`);
       if (conn.serialization !== "raw") {
         pushLog(
@@ -796,6 +801,7 @@ export default function Home() {
           if (control.kind === "transfer-start") {
             const source = control.label === "Folder" ? "Folder" : "Files";
             incomingTransferLabelRef.current = source;
+            setNotifications((prev) => ({ ...prev, file: true }));
             pushLog(`Incoming ${source.toLowerCase()} transfer: ${control.count ?? 0} item(s).`);
             return;
           }
@@ -932,11 +938,13 @@ export default function Home() {
     });
 
     peer.on("connection", (conn) => {
+      setNotifications((prev) => ({ ...prev, connection: true }));
       pushLog(`Incoming connection from ${conn.peer}`);
       conn.on("open", () => wireConnection(conn));
     });
 
     peer.on("call", async (call) => {
+      setNotifications((prev) => ({ ...prev, call: true }));
       pushLog(`Incoming call from ${call.peer}`);
       try {
         if (!localStreamRef.current) {
@@ -1463,47 +1471,65 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#030712] via-[#0b1120] to-[#111827] px-4 py-8 text-slate-100 sm:px-6">
       <SpeedInsights />
-      <div className="mx-auto grid w-full max-w-7xl gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <header className="rounded-2xl border border-slate-800/80 bg-[#020617]/80 p-3 backdrop-blur lg:col-span-2">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="mx-auto w-full max-w-7xl overflow-hidden rounded-2xl border border-slate-800/90 bg-[#040b18]">
+        <header className="border-b border-slate-800 bg-[#020617] px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === "home"
+                    ? "bg-cyan-500 text-slate-950"
+                    : "border border-slate-700 bg-[#0b1220] text-slate-200 hover:bg-[#131d33]"
+                }`}
+                onClick={() => setActiveTab("home")}
+                type="button"
+              >
+                <House className="size-4" />
+                Home
+              </button>
+              <button
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === "transfer"
+                    ? "bg-cyan-500 text-slate-950"
+                    : "border border-slate-700 bg-[#0b1220] text-slate-200 hover:bg-[#131d33]"
+                }`}
+                onClick={() => setActiveTab("transfer")}
+                type="button"
+              >
+                <Folder className="size-4" />
+                File Transfer
+              </button>
+              <button
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === "call"
+                    ? "bg-cyan-500 text-slate-950"
+                    : "border border-slate-700 bg-[#0b1220] text-slate-200 hover:bg-[#131d33]"
+                }`}
+                onClick={() => setActiveTab("call")}
+                type="button"
+              >
+                <Phone className="size-4" />
+                Call
+              </button>
+            </div>
             <button
-              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                activeTab === "home"
-                  ? "bg-cyan-500 text-slate-950"
-                  : "border border-slate-700 bg-[#0b1220] text-slate-200 hover:bg-[#131d33]"
-              }`}
-              onClick={() => setActiveTab("home")}
+              className="relative inline-flex items-center justify-center rounded-xl border border-slate-700 bg-[#0b1220] p-2 text-slate-200 transition hover:bg-[#131d33]"
+              onClick={() => setNotifications({ call: false, file: false, connection: false })}
               type="button"
+              title="Notifications"
             >
-              <House className="size-4" />
-              Home
-            </button>
-            <button
-              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                activeTab === "transfer"
-                  ? "bg-cyan-500 text-slate-950"
-                  : "border border-slate-700 bg-[#0b1220] text-slate-200 hover:bg-[#131d33]"
-              }`}
-              onClick={() => setActiveTab("transfer")}
-              type="button"
-            >
-              <Folder className="size-4" />
-              File Transfer
-            </button>
-            <button
-              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                activeTab === "call"
-                  ? "bg-cyan-500 text-slate-950"
-                  : "border border-slate-700 bg-[#0b1220] text-slate-200 hover:bg-[#131d33]"
-              }`}
-              onClick={() => setActiveTab("call")}
-              type="button"
-            >
-              <Phone className="size-4" />
-              Call
+              {(notifications.call || notifications.file || notifications.connection) && (
+                <>
+                  <span className="pointer-events-none absolute inset-0 m-auto size-8 rounded-full bg-white/65 animate-ping" />
+                  <span className="pointer-events-none absolute inset-0 m-auto size-8 rounded-full bg-white/30 animate-pulse" />
+                </>
+              )}
+              <Bell className="relative z-10 size-4" />
             </button>
           </div>
         </header>
+
+        <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_380px]">
 
         {/* Left-side workspace for connection setup, logs, and diagnostics */}
         <main className="rounded-2xl border border-slate-800 bg-[#070f1f]/80 p-5 backdrop-blur">
@@ -1618,42 +1644,6 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-2">
-                <input
-                  className={inputClass}
-                  placeholder="Name (optional)"
-                  value={sender}
-                  onChange={(e) => setSender(e.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      sendCurrentMessage();
-                    }
-                  }}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                <input
-                  className={inputClass}
-                  placeholder="Type message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      sendCurrentMessage();
-                    }
-                  }}
-                />
-                <button
-                  className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
-                  onClick={sendCurrentMessage}
-                >
-                  Send
-                </button>
-              </div>
-
               <button
                 className="w-full rounded-xl border border-slate-700 bg-[#030712] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-[#111827]"
                 onClick={() => {
@@ -1707,6 +1697,40 @@ export default function Home() {
           {/* Event log for sent messages, received messages, and transfer updates */}
           <section className="mt-4 rounded-xl border border-slate-800 bg-[#0a1324]/70 p-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Chat and Log</h2>
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              <input
+                className={inputClass}
+                placeholder="Name (optional)"
+                value={sender}
+                onChange={(e) => setSender(e.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    sendCurrentMessage();
+                  }
+                }}
+              />
+            </div>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <input
+                className={inputClass}
+                placeholder="Type message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    sendCurrentMessage();
+                  }
+                }}
+              />
+              <button
+                className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
+                onClick={sendCurrentMessage}
+              >
+                Send
+              </button>
+            </div>
             <div
               ref={logContainerRef}
               className="mt-3 max-h-72 min-h-40 space-y-1 overflow-auto rounded-lg border border-slate-700 bg-[#030712] p-3 font-mono text-xs"
@@ -1941,9 +1965,10 @@ export default function Home() {
                           </div>
                         </div>
                         <div className="mt-2 flex items-center gap-2">
-                          <Progress value={Math.min(Math.max(item.progress * 100, 0), 100)} className="h-2" />
-                          <SlidingNumber number={Math.round(item.progress * 100)} className="w-8 text-right text-[11px] text-slate-300" />
-                          <span className="text-[11px] text-slate-400">%</span>
+                          <Progress
+                            value={Math.min(Math.max(item.progress * 100, 0), 100)}
+                            className="h-2 bg-slate-700 [&_[data-slot=progress-indicator]]:bg-cyan-400"
+                          />
                         </div>
                         <p className="mt-1 text-slate-400">
                           {formatBytes(Math.max(item.rate, 0))}/s
@@ -1990,9 +2015,10 @@ export default function Home() {
                           </div>
                         </div>
                         <div className="mt-2 flex items-center gap-2">
-                          <Progress value={Math.min(Math.max(item.progress * 100, 0), 100)} className="h-2" />
-                          <SlidingNumber number={Math.round(item.progress * 100)} className="w-8 text-right text-[11px] text-slate-300" />
-                          <span className="text-[11px] text-slate-400">%</span>
+                          <Progress
+                            value={Math.min(Math.max(item.progress * 100, 0), 100)}
+                            className="h-2 bg-slate-700 [&_[data-slot=progress-indicator]]:bg-cyan-400"
+                          />
                         </div>
                         <p className="mt-1 text-slate-400">{formatBytes(Math.max(item.rate, 0))}/s</p>
                         <p className={item.complete ? "mt-2 text-emerald-300" : "mt-2 text-slate-400"}>
@@ -2023,6 +2049,7 @@ export default function Home() {
             </section>
           )}
         </main>
+        </div>
       </div>
     </div>
   );
