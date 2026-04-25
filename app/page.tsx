@@ -1603,8 +1603,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#030712] via-[#0b1120] to-[#111827] text-slate-100">
       <SpeedInsights />
-      <header className="fixed inset-x-0 top-0 z-20 border-b border-slate-800 bg-[#020617] px-0">
-          <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+        <header className="fixed inset-x-0 top-0 z-20 border-b border-slate-800 bg-[#020617] px-0">
+          <div className="mx-auto flex w-full max-w-[96rem] flex-wrap items-center justify-between gap-3 px-2 py-3 sm:px-3 lg:px-4">
             <div className="flex flex-wrap items-center gap-2">
               <button
                 className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
@@ -1660,8 +1660,8 @@ export default function Home() {
           </div>
       </header>
 
-      <div className="mx-auto w-full max-w-7xl px-4 pb-5 pt-24 sm:px-6 lg:px-8">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="mx-auto w-full max-w-[96rem] px-2 pb-5 pt-24 sm:px-3 lg:px-4">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_380px]">
 
         {/* Left-side workspace for connection setup, logs, and diagnostics */}
         <main className="rounded-2xl border border-slate-800 bg-[#070f1f]/80 p-3 backdrop-blur">
