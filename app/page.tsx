@@ -1664,7 +1664,7 @@ export default function Home() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
 
         {/* Left-side workspace for connection setup, logs, and diagnostics */}
-        <main className="rounded-2xl border border-slate-800 bg-[#070f1f]/80 p-5 backdrop-blur">
+        <main className="rounded-2xl border border-slate-800 bg-[#070f1f]/80 p-1 backdrop-blur">
           <h1 className="text-2xl font-bold tracking-tight">PeerJS Live Test</h1>
           <p className="mt-2 text-sm text-slate-300">
             Connect | transfer files/folders | calls
